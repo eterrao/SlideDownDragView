@@ -35,7 +35,7 @@ class PreviewActivity : AppCompatActivity() {
 
             override fun onFinished() {
                 finish()
-//                overridePendingTransition(R.anim.alpha_out )
+                overridePendingTransition(R.anim.alpha_in, R.anim.alpha_out)
             }
         })
 

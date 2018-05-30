@@ -5,16 +5,21 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
+
+import com.github.chrisbanes.photoview.PhotoView;
 
 /**
  * Created by Raomengyang on 18-5-30.
@@ -61,7 +66,7 @@ public class SlideDownDragView extends FrameLayout {
     private float yInView;
 
 
-    private View mPhotoView;
+    private PhotoView mPhotoView;
     private Rect zoomRect;
 
     public SlideDownDragView(Context context) {
@@ -93,7 +98,7 @@ public class SlideDownDragView extends FrameLayout {
         for (int index = 0; index < getChildCount(); index++) {
             Log.e("xxxxx ", getChildAt(index).getClass().getCanonicalName());
         }
-        mPhotoView = getChildAt(0);
+        mPhotoView = (PhotoView) getChildAt(0);
     }
 
     float mLastX = 0;
@@ -106,7 +111,7 @@ public class SlideDownDragView extends FrameLayout {
         if (!isEnabled()) {
             return super.onInterceptTouchEvent(ev);
         }
-
+        int alpha = 0;
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 mLastX = ev.getX();
@@ -135,7 +140,7 @@ public class SlideDownDragView extends FrameLayout {
                 mPhotoView.setScaleX(ratio);
                 mPhotoView.setScaleY(ratio);
 
-                int alpha = (int) (255 * ratio);
+                alpha = (int) (255 * ratio);
                 if (alpha > 255) {
                     alpha = 255;
                 } else if (alpha < 0) {
@@ -151,6 +156,7 @@ public class SlideDownDragView extends FrameLayout {
                     float originHeight = zoomRect.height() * 1.0f / getHeight();
                     Log.e(TAG, "originWidth ==> " + originWidth + " , originHeight==> " + originHeight);
                     Log.e(TAG, "mLastX ==> " + mLastX + " , mLastY ==> " + mLastY);
+                    final int finalAlpha = alpha;
                     mPhotoView.animate()
                             .translationX(zoomRect.centerX() - getWidth() / 2)
                             .translationY(zoomRect.centerY() - getHeight() / 2 - zoomRect.height())
@@ -161,7 +167,40 @@ public class SlideDownDragView extends FrameLayout {
                             .setUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                                 @Override
                                 public void onAnimationUpdate(ValueAnimator animation) {
-                                    Log.e(TAG, "animation.getValues()==> " + animation.getValues());
+                                    Log.e(TAG, "animation.getValues()==> " + animation.getAnimatedValue());
+                                    float value = (float) animation.getAnimatedValue();
+                                    int alp = (int) (finalAlpha * (1 - value));
+                                    setBackgroundColor(Color.argb(alp, 0, 0, 0));
+
+
+                                    final int dwidth = mPhotoView.getWidth();
+                                    final int dheight = mPhotoView.getHeight();
+
+                                    final int vwidth = getWidth() - mPhotoView.getPaddingLeft() - mPhotoView.getPaddingRight();
+                                    final int vheight = getHeight() - mPhotoView.getPaddingTop() - mPhotoView.getPaddingBottom();
+
+                                    final boolean fits = (dwidth < 0 || vwidth == dwidth)
+                                            && (dheight < 0 || vheight == dheight);
+
+                                    Matrix mDrawMatrix = new Matrix();
+                                    float scale;
+                                    float dx = 0, dy = 0;
+                                    if (dwidth * vheight > vwidth * dheight) {
+                                        scale = (float) vheight / (float) dheight;
+                                        dx = (vwidth - dwidth * scale) * 0.5f;
+                                    } else {
+                                        scale = (float) vwidth / (float) dwidth;
+                                        dy = (vheight - dheight * scale) * 0.5f;
+                                    }
+
+                                    mDrawMatrix.setScale(scale, scale);
+                                    mDrawMatrix.postTranslate(Math.round(dx), Math.round(dy));
+
+//                                    Bitmap bmp = Bitmap.createBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.img_long_1));
+//                                    Canvas canvas = new Canvas(bmp);
+//                                    canvas.concat(mDrawMatrix);
+//                                    canvas.drawBitmap();
+//                                    mPhotoView.setImageBitmap(bmp);
                                 }
                             })
                             .setListener(new AnimatorListenerAdapter() {
