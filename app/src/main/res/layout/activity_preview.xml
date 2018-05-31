@@ -8,12 +8,21 @@
     <com.welove520.galleryscaleanimationdemo.SlideDownDragView
         android:id="@+id/sddv_preview"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="match_parent">
 
         <com.github.chrisbanes.photoview.PhotoView
             android:id="@+id/pv_photo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
             android:src="@drawable/img_long_1" />
     </com.welove520.galleryscaleanimationdemo.SlideDownDragView>
+
+    <ImageView
+        android:id="@+id/iv_preview"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_margin="10dp" />
 </RelativeLayout>

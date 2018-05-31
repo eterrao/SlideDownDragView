@@ -4,6 +4,8 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestOptions
 import kotlinx.android.synthetic.main.activity_preview.*
 import java.text.DecimalFormat
 
@@ -20,15 +22,16 @@ class PreviewActivity : AppCompatActivity() {
     }
 
     private fun initView() {
-//        Glide.with(this)
-//                .load(R.drawable.img_long_1).into(pv_photo)
-//        pv_photo.setOnTouchListener { view, event ->
-//            Log.e("xxxx", "p1!!.action==> " + event!!.action + " , view class: " )
-//            true
-//        }
+        val options = RequestOptions();
+        options.fitCenter()
+        Glide.with(this)
+                .load(R.drawable.img_long_1)
+                .apply(options)
+                .into(pv_photo)
         var rect = intent.getParcelableExtra<Rect>("rect")
         Log.e("xxxxxx", rect.toString())
         sddv_preview.setZoomRect(rect)
+        sddv_preview.setImageView(iv_preview)
         sddv_preview.setOnStatusChangeListener(object : SlideDownDragView.OnStatusChangeListener {
             override fun onStart() {
             }
