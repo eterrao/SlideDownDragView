@@ -2,27 +2,27 @@ package com.welove520.galleryscaleanimationdemo;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.animation.ValueAnimator;
 import android.annotation.TargetApi;
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Matrix;
-import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Build;
-import android.support.annotation.NonNull;
+import android.support.transition.ChangeBounds;
+import android.support.transition.ChangeImageTransform;
+import android.support.transition.Transition;
+import android.support.transition.TransitionManager;
+import android.support.transition.TransitionPropagation;
+import android.support.transition.TransitionSet;
+import android.support.transition.TransitionValues;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
-
-import com.bumptech.glide.load.resource.bitmap.TransformationUtils;
-import com.github.chrisbanes.photoview.PhotoView;
+import android.widget.RelativeLayout;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -35,14 +35,14 @@ import org.jetbrains.annotations.Nullable;
 
 public class SlideDownDragView extends FrameLayout {
     private static final String TAG = SlideDownDragView.class.getSimpleName();
-    private static final int FREE_MODE = -1;
-    private static final int EXIT_MODE = 1;
-    private int mCurrentMode;
 
+    float mLastX = 0;
+    float mLastY = 0;
+    float ratio = 0;
 
-    private PhotoView mPhotoView;
+    private View mPhotoView;
     private Rect zoomRect;
-    private ImageView ivPreview;
+    private ViewGroup mContainer;
 
     public SlideDownDragView(Context context) {
         this(context, null);
@@ -54,17 +54,6 @@ public class SlideDownDragView extends FrameLayout {
 
     public SlideDownDragView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
-    }
-
-
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public SlideDownDragView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
-        super(context, attrs, defStyleAttr, defStyleRes);
-    }
-
-    private void init() {
-        mCurrentMode = FREE_MODE;
     }
 
     @Override
@@ -73,27 +62,23 @@ public class SlideDownDragView extends FrameLayout {
         for (int index = 0; index < getChildCount(); index++) {
             Log.e("xxxxx ", getChildAt(index).getClass().getCanonicalName());
         }
-        mPhotoView = (PhotoView) getChildAt(0);
+        mPhotoView = getChildAt(0);
     }
-
-    float mLastX = 0;
-    float mLastY = 0;
-    float ratio = 0;
 
     @TargetApi(Build.VERSION_CODES.KITKAT)
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
-        if (!isEnabled()) {
-            mPhotoView.animate()
-                    .translationX(0)
-                    .translationY(0)
-                    .scaleX(1)
-                    .scaleY(1)
-                    .setInterpolator(new OvershootInterpolator())
-                    .setDuration(300)
-                    .start();
-            return super.onInterceptTouchEvent(ev);
-        }
+//        if (!isEnabled()) {
+//            mPhotoView.animate()
+//                    .translationX(0)
+//                    .translationY(0)
+//                    .scaleX(1)
+//                    .scaleY(1)
+//                    .setInterpolator(new OvershootInterpolator())
+//                    .setDuration(300)
+//                    .start();
+//            return super.onInterceptTouchEvent(ev);
+//        }
         int alpha = 0;
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN:
@@ -130,69 +115,84 @@ public class SlideDownDragView extends FrameLayout {
                     alpha = 0;
                 }
                 setBackgroundColor(Color.argb(alpha, 0, 0, 0));
-
+                if (getParent() != null) {
+                    if (getParent() instanceof ViewGroup) {
+                        ViewGroup viewGroup = (ViewGroup) getParent();
+                        viewGroup.setBackgroundColor(Color.argb(alpha, 0, 0, 0));
+                    }
+                }
                 break;
 
             case MotionEvent.ACTION_UP:
-                if (ratio < 0.8) {
-                    float originWidth = zoomRect.width() * 1.0f / getWidth();
-                    float originHeight = zoomRect.height() * 1.0f / getHeight();
+                if (ratio < 0.8 && zoomRect != null) {
+                    final float originWidth = zoomRect.width() * 1.0f / getWidth();
+                    final float originHeight = zoomRect.height() * 1.0f / getHeight();
                     Log.e(TAG, "originWidth ==> " + originWidth + " , originHeight==> " + originHeight);
                     Log.e(TAG, "mLastX ==> " + mLastX + " , mLastY ==> " + mLastY);
                     final int finalAlpha = alpha;
-                    mPhotoView.animate()
-                            .translationX(zoomRect.centerX() - getWidth() / 2)
-                            .translationY(zoomRect.centerY() - getHeight() / 2 - zoomRect.height())
-                            .scaleX(originWidth)
-                            .scaleY(originHeight)
-                            .setInterpolator(new AccelerateDecelerateInterpolator())
-                            .setDuration(300)
-                            .setUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                                @Override
-                                public void onAnimationUpdate(ValueAnimator animation) {
-                                    Log.e(TAG, "animation.getValues()==> " + animation.getAnimatedValue());
-                                    float value = (float) animation.getAnimatedValue();
-                                    int alp = (int) (finalAlpha * (1 - value));
-                                    setBackgroundColor(Color.argb(alp, 0, 0, 0));
+//                    mPhotoView.animate()
+//                            .translationX(zoomRect.centerX() - getWidth() / 2)
+//                            .translationY(zoomRect.centerY() - getHeight() / 2)
+////                            .scaleX(originWidth)
+////                            .scaleY(originHeight)
+//                            .setInterpolator(new AccelerateDecelerateInterpolator())
+//                            .setDuration(300)
+//                            .setUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+//                                @Override
+//                                public void onAnimationUpdate(ValueAnimator valueAnimator) {
+//                                    Log.e(TAG, "animation.getValues()==> " + valueAnimator.getAnimatedValue());
+//                                    float value = (float) valueAnimator.getAnimatedValue();
+//                                    int alp = (int) (finalAlpha * (1 - value));
+//                                    setBackgroundColor(Color.argb(alp, 0, 0, 0));
+//                                }
+//                            })
+//                            .setListener(new AnimatorListenerAdapter() {
+//                                @Override
+//                                public void onAnimationStart(Animator animation) {
+//
+//                                }
+//
+//                                @Override
+//                                public void onAnimationEnd(Animator animation) {
+//                                    if (mOnStatusChangeListener != null) {
+//                                        mOnStatusChangeListener.onFinished();
+//                                    }
+//                                }
+//                            }).start();
 
+                    TransitionManager.beginDelayedTransition(SlideDownDragView.this, new TransitionSet()
+                            .addTransition(new ChangeImageTransform())
+                            .addTransition(new ChangeBounds())
+                    );
+                    if (mPhotoView instanceof ImageView) {
+                        ((ImageView) mPhotoView).setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    }
+                    FrameLayout.LayoutParams lp = (LayoutParams) mPhotoView.getLayoutParams();
+                    lp.width = (int) (zoomRect.width() / ratio);
+                    lp.height = (int) (zoomRect.height() / ratio);
+                    lp.leftMargin = zoomRect.left;
+                    lp.topMargin = zoomRect.top;
+                    lp.rightMargin = zoomRect.right;
+                    lp.bottomMargin = zoomRect.bottom;
+                    mPhotoView.setLayoutParams(lp);
 
-                                    mPhotoView.setDrawingCacheEnabled(true);//设置能否缓存图片信息（drawing cache）
-                                    mPhotoView.buildDrawingCache();//如果能够缓存图片，则创建图片缓存
-                                    Bitmap cacheBmp = mPhotoView.getDrawingCache().copy(Bitmap.Config.ARGB_8888, true);//如果图片已经缓存，返回一个bitmap
-                                    mPhotoView.destroyDrawingCache();//释放缓存占用的资源
-
-                                    final int dwidth = (int) (mPhotoView.getWidth() *(1 - value));
-                                    final int dheight = (int) (mPhotoView.getHeight() * (1 - value));
-
-                                    Bitmap bmp = Bitmap.createBitmap(cacheBmp, 0, 0, dwidth, dheight);
-                                    ivPreview.setImageBitmap(bmp);
-//                                    ivPreview.setImageBitmap(centerCrop(cacheBmp, dwidth, dheight));
-//                                    mPhotoView.setImageBitmap(centerCrop(cacheBmp, dwidth, dheight));
-
-//                                    Bitmap bmp = Bitmap.createBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.img_long_1));
-//                                    Canvas canvas = new Canvas(bmp);
-//                                    canvas.concat(mDrawMatrix);
-//                                    canvas.drawBitmap();
-//                                    mPhotoView.setImageBitmap(bmp);
-                                }
-                            })
-                            .setListener(new AnimatorListenerAdapter() {
-                                @Override
-                                public void onAnimationEnd(Animator animation) {
-                                    if (mOnStatusChangeListener != null) {
-                                        mOnStatusChangeListener.onFinished();
-                                    }
-                                }
-                            })
-                            .start();
+                    return true;
+//                            .start();
                 } else {
+                    setBackgroundColor(Color.argb(255, 0, 0, 0));
+                    if (getParent() != null) {
+                        if (getParent() instanceof ViewGroup) {
+                            ViewGroup viewGroup = (ViewGroup) getParent();
+                            viewGroup.setBackgroundColor(Color.argb(255, 0, 0, 0));
+                        }
+                    }
                     mPhotoView.animate()
                             .translationX(0)
                             .translationY(0)
                             .scaleX(1)
                             .scaleY(1)
                             .setInterpolator(new OvershootInterpolator())
-                            .setDuration(300)
+                            .setDuration(250)
                             .setListener(new AnimatorListenerAdapter() {
                                 @Override
                                 public void onAnimationStart(Animator animation) {
@@ -209,61 +209,9 @@ public class SlideDownDragView extends FrameLayout {
         return super.onInterceptTouchEvent(ev);
     }
 
-    public static final int PAINT_FLAGS = Paint.DITHER_FLAG | Paint.FILTER_BITMAP_FLAG;
-    private static final Paint DEFAULT_PAINT = new Paint(PAINT_FLAGS);
-
-    public static Bitmap centerCrop(@NonNull Bitmap inBitmap, int width,
-                                    int height) {
-        if (inBitmap.getWidth() == width && inBitmap.getHeight() == height) {
-            return inBitmap;
-        }
-        // From ImageView/Bitmap.createScaledBitmap.
-        final float scale;
-        final float dx;
-        final float dy;
-        Matrix m = new Matrix();
-        if (inBitmap.getWidth() * height > width * inBitmap.getHeight()) {
-            scale = (float) height / (float) inBitmap.getHeight();
-            dx = (width - inBitmap.getWidth() * scale) * 0.5f;
-            dy = 0;
-        } else {
-            scale = (float) width / (float) inBitmap.getWidth();
-            dx = 0;
-            dy = (height - inBitmap.getHeight() * scale) * 0.5f;
-        }
-
-        m.setScale(scale, scale);
-        m.postTranslate((int) (dx + 0.5f), (int) (dy + 0.5f));
-
-        Bitmap result = Bitmap.createBitmap(inBitmap, 0, 0, width, height);
-        // We don't add or remove alpha, so keep the alpha setting of the Bitmap we were given.
-        TransformationUtils.setAlpha(inBitmap, result);
-
-        applyMatrix(inBitmap, result, m);
-        return result;
-    }
-
-    private static void applyMatrix(@NonNull Bitmap inBitmap, @NonNull Bitmap targetBitmap,
-                                    Matrix matrix) {
-        Canvas canvas = new Canvas(targetBitmap);
-        canvas.drawBitmap(inBitmap, matrix, DEFAULT_PAINT);
-        clear(canvas);
-    }
-
-    // Avoids warnings in M+.
-    private static void clear(Canvas canvas) {
-        canvas.setBitmap(null);
-    }
-
-    @NonNull
-    private static Bitmap.Config getNonNullConfig(@NonNull Bitmap bitmap) {
-        return bitmap.getConfig() != null ? bitmap.getConfig() : Bitmap.Config.ARGB_8888;
-    }
-
     public void setZoomRect(Rect zoomRect) {
         this.zoomRect = zoomRect;
     }
-
 
     private OnStatusChangeListener mOnStatusChangeListener;
 
@@ -271,13 +219,11 @@ public class SlideDownDragView extends FrameLayout {
         this.mOnStatusChangeListener = onStatusChangeListener;
     }
 
-    public void setImageView(@Nullable ImageView iv_preview) {
-        this.ivPreview = iv_preview;
+    public void setParentView(@Nullable RelativeLayout rl_container) {
+        mContainer = rl_container;
     }
 
     public interface OnStatusChangeListener {
         void onFinished();
-
-        void onStart();
     }
 }

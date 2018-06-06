@@ -3,6 +3,7 @@ package com.welove520.galleryscaleanimationdemo
 import android.content.Intent
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import com.bumptech.glide.Glide
@@ -16,20 +17,20 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        setSupportActionBar(toolbar)
         val options = RequestOptions()
         options.centerCrop()
 
 
         Glide.with(this)
-                .load(R.drawable.img_long_1)
+                .load(R.drawable.bg_car)
                 .apply(options)
                 .into(pv_original)
         fab.setOnClickListener { view ->
             var it = Intent(this, PreviewActivity::class.java)
 
             var rectUtil = RectUtil()
-            var rect = rectUtil.getViewRect(pv_original)
+            var rect = rectUtil.getViewRect(this@MainActivity, pv_original, true)
+            Log.e("xxxx rect==> ", rect.toString())
             it.putExtra("rect", rect)
             startActivity(it)
         }
